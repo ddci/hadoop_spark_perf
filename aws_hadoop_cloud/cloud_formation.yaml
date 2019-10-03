@@ -35,54 +35,171 @@ Parameters:
     AllowedPattern: '(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})'
     ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
 Resources:
-  InstanceSecurityGroup:
-    Type: 'AWS::EC2::SecurityGroup'
-    Properties:
-      GroupDescription: Enable SSH access via port 22
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: '22'
-          ToPort: '22'
-          CidrIp: !Ref SSHLocation
-    Metadata:
-      'AWS::CloudFormation::Designer':
-        id: dd3ae3a6-2caf-4b35-9b96-b77b81e8f16b
-  nodemaster:
+  node1:
     Type: 'AWS::EC2::Instance'
     Properties:
+      IamInstanceProfile: SMMParams
+      PrivateIpAddress: 10.0.0.101
       InstanceType: !Ref InstanceType
-      SecurityGroups:
-        - !Ref InstanceSecurityGroup
+      SecurityGroupIds:
+        - sg-019e64f29439e7b37
       KeyName: !Ref KeyName
       ImageId: ami-0ac05733838eabc06
+      SubnetId: subnet-05b488b0d3a29e68a
+      Tags:
+        - Key: Name
+          Value: node1
       UserData: !Base64
         'Fn::Join':
           - ''
           - - |
               #!/bin/bash -xe
             - |
-              apt-get update -y && sudo apt-get upgrade -y
+              apt-get update -y
+              apt install awscli -y
               # Install Java 8
               apt-get install openjdk-8-jdk -y
+              # Configure Hosts
+              echo "10.0.0.100 node-master" >> /etc/hosts
+              echo "10.0.0.101 node1" >> /etc/hosts
+              echo "10.0.0.102 node2" >> /etc/hosts
               useradd -u 12345 -g users -m -s /bin/bash -p hadoop hadoop
               su - hadoop
               cd /home/hadoop/
               wget http://apache.cs.utah.edu/hadoop/common/current/hadoop-3.1.2.tar.gz
               tar -xzf hadoop-3.1.2.tar.gz
               mv hadoop-3.1.2 hadoop
-            - |
-              # Install the files and packages from the metadata
-            - '/opt/aws/bin/cfn-init -v '
-            - '         --stack '
-            - !Ref 'AWS::StackName'
-            - '         --resource WebServerInstance '
-            - '         --configsets Install '
-            - '         --region '
-            - !Ref 'AWS::Region'
+              # Keys Management
+              mkdir /home/hadoop/.ssh
+              chmod 700 /home/hadoop/.ssh
+              touch /home/hadoop/.ssh/authorized_keys
+              # Add authorized_keys
+              echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDJxSrz37zufyw0bl8yXlqBR2aFDykH2UZ29VjHCjhklqbUAomBk8GlzgnaMJ3lKfpC1owepB+KjpPJKDliuYx26p8f/nCInpanZRqmWRqFxmdvt5Tb/3mx0GlTxHsVM65RLymx8E1fUC6zZn1xFfBKIU5SuVFkF988zWnsyl0/ZmJh0kdOqHxmkz4vb2ezs10S8dkMNaPxTNER2ovA5ShiFVS4ZqX2DfWyT2F9TbNDvH6U5adtkyo2Gds/HEzOnXoenyxE07QlXriB0fd2JdXx9y9bcaAEd/JLYuV0miU/t2l/bGJ0uq7mHpT6pHwQ1fQ2CvlUETwO/OmhOq/zzcot danielnikulin@MBP-Daniel.local" >> /home/hadoop/.ssh/authorized_keys
+              master_node_public_key=$(aws ssm get-parameter --region eu-central-1  --name "master_node_public_key" --with-decryption --output text --query Parameter.Value)
+              echo $master_node_public_key >> /home/hadoop/.ssh/authorized_keys
+              chown -R hadoop  /home/hadoop/.ssh/
             - |+
+
     Metadata:
       'AWS::CloudFormation::Designer':
-        id: 0a226bb8-e762-4d35-b7ad-87d08e1b4af9
+        id: 12226bb8-e762-4d35-b7ad-87d08e1b4af9
+  node2:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      IamInstanceProfile: SMMParams
+      PrivateIpAddress: 10.0.0.102
+      InstanceType: !Ref InstanceType
+      SecurityGroupIds:
+        - sg-019e64f29439e7b37
+      KeyName: !Ref KeyName
+      ImageId: ami-0ac05733838eabc06
+      SubnetId: subnet-05b488b0d3a29e68a
+      Tags:
+        - Key: Name
+          Value: node2
+      UserData: !Base64
+        'Fn::Join':
+          - ''
+          - - |
+              #!/bin/bash -xe
+            - |
+              apt-get update -y
+              apt install awscli -y
+              # Install Java 8
+              apt-get install openjdk-8-jdk -y
+              # Configure Hosts
+              echo "10.0.0.100 node-master" >> /etc/hosts
+              echo "10.0.0.101 node1" >> /etc/hosts
+              echo "10.0.0.102 node2" >> /etc/hosts
+              useradd -u 12345 -g users -m -s /bin/bash -p hadoop hadoop
+              su - hadoop
+              cd /home/hadoop/
+              wget http://apache.cs.utah.edu/hadoop/common/current/hadoop-3.1.2.tar.gz
+              tar -xzf hadoop-3.1.2.tar.gz
+              mv hadoop-3.1.2 hadoop
+              # Keys Management
+              mkdir /home/hadoop/.ssh
+              chmod 700 /home/hadoop/.ssh
+              touch /home/hadoop/.ssh/authorized_keys
+              # Add authorized_keys
+              echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDJxSrz37zufyw0bl8yXlqBR2aFDykH2UZ29VjHCjhklqbUAomBk8GlzgnaMJ3lKfpC1owepB+KjpPJKDliuYx26p8f/nCInpanZRqmWRqFxmdvt5Tb/3mx0GlTxHsVM65RLymx8E1fUC6zZn1xFfBKIU5SuVFkF988zWnsyl0/ZmJh0kdOqHxmkz4vb2ezs10S8dkMNaPxTNER2ovA5ShiFVS4ZqX2DfWyT2F9TbNDvH6U5adtkyo2Gds/HEzOnXoenyxE07QlXriB0fd2JdXx9y9bcaAEd/JLYuV0miU/t2l/bGJ0uq7mHpT6pHwQ1fQ2CvlUETwO/OmhOq/zzcot danielnikulin@MBP-Daniel.local" >> /home/hadoop/.ssh/authorized_keys
+              master_node_public_key=$(aws ssm get-parameter --region eu-central-1  --name "master_node_public_key" --with-decryption --output text --query Parameter.Value)
+              echo $master_node_public_key >> /home/hadoop/.ssh/authorized_keys
+              chown -R hadoop  /home/hadoop/.ssh/
+            - |+
+
+  nodemaster:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      IamInstanceProfile: SMMParams
+      PrivateIpAddress: 10.0.0.100
+      InstanceType: !Ref InstanceType
+      SecurityGroupIds:
+        - sg-019e64f29439e7b37
+      KeyName: !Ref KeyName
+      ImageId: ami-0ac05733838eabc06
+      SubnetId: subnet-05b488b0d3a29e68a
+      Tags:
+        - Key: Name
+          Value: nodemaster
+      UserData: !Base64
+        'Fn::Join':
+          - ''
+          - - |
+              #!/bin/bash -xe
+            - |
+              apt-get update -y
+              apt install awscli -y
+              # Install Java 8
+              apt-get install openjdk-8-jdk -y
+              # Configure Hosts
+              echo "10.0.0.100 node-master" >> /etc/hosts
+              echo "10.0.0.101 node1" >> /etc/hosts
+              echo "10.0.0.102 node2" >> /etc/hosts
+              useradd -u 12345 -g users -m -s /bin/bash -p hadoop hadoop
+              su - hadoop
+              cd /home/hadoop/
+              wget http://apache.cs.utah.edu/hadoop/common/current/hadoop-3.1.2.tar.gz
+              tar -xzf hadoop-3.1.2.tar.gz
+              mv hadoop-3.1.2 hadoop
+              # Keys Management
+              private_key=$(aws ssm get-parameter --region eu-central-1  --name "master_node_private_key" --with-decryption --output text --query Parameter.Value)
+              public_key=$(aws ssm get-parameter --region eu-central-1  --name "master_node_public_key" --with-decryption --output text --query Parameter.Value)
+              echo $public_key
+              mkdir /home/hadoop/.ssh
+              chmod 700 /home/hadoop/.ssh
+              touch /home/hadoop/.ssh/authorized_keys
+              chmod 600 /home/hadoop/.ssh/authorized_keys
+              # TODO REMOVE Adding my MacBook Public Key
+              sudo -u hadoop bash
+              echo -e "\n\n\n" | ssh-keygen -b 4096
+              echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDJxSrz37zufyw0bl8yXlqBR2aFDykH2UZ29VjHCjhklqbUAomBk8GlzgnaMJ3lKfpC1owepB+KjpPJKDliuYx26p8f/nCInpanZRqmWRqFxmdvt5Tb/3mx0GlTxHsVM65RLymx8E1fUC6zZn1xFfBKIU5SuVFkF988zWnsyl0/ZmJh0kdOqHxmkz4vb2ezs10S8dkMNaPxTNER2ovA5ShiFVS4ZqX2DfWyT2F9TbNDvH6U5adtkyo2Gds/HEzOnXoenyxE07QlXriB0fd2JdXx9y9bcaAEd/JLYuV0miU/t2l/bGJ0uq7mHpT6pHwQ1fQ2CvlUETwO/OmhOq/zzcot danielnikulin@MBP-Daniel.local" >> /home/hadoop/.ssh/authorized_keys
+              echo $private_key >> /home/hadoop/.ssh/id_rsa
+              echo $public_key >> /home/hadoop/.ssh/id_rsa.pub
+              chmod 400 /home/hadoop/.ssh/id_rsa
+              chmod 644 /home/hadoop/.ssh/id_rsa.pub
+              chown -R hadoop  /home/hadoop/.ssh/
+              echo "PATH=/home/hadoop/hadoop/bin:/home/hadoop/hadoop/sbin:$PATH" >> /home/hadoop/.profile
+              echo "export HADOOP_HOME=/home/hadoop/hadoop" >> /home/hadoop/.bashrc
+              echo "export PATH=${PATH}:${HADOOP_HOME}/bin:${HADOOP_HOME}/sbin" >> /home/hadoop/.bashrc
+              echo "export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre" >> /home/hadoop/hadoop/etc/hadoop/hadoop-env.sh
+              # Get configuration from S3
+              aws s3 cp s3://hadoopparameters/core-site.xml /home/hadoop/hadoop/etc/hadoop/core-site.xml
+              aws s3 cp s3://hadoopparameters/core-site.xml /home/hadoop/hadoop/etc/hadoop/hdfs-site.xml
+              aws s3 cp s3://hadoopparameters/core-site.xml /home/hadoop/hadoop/etc/hadoop/mapred-site.xml
+              aws s3 cp s3://hadoopparameters/core-site.xml /home/hadoop/hadoop/etc/hadoop/yarn-site.xml
+
+              # Configure workers
+              for node in node1 node2; do
+                  echo "$node" >> /home/hadoop/hadoop/etc/hadoop/workers
+              done
+
+              for node in node1 node2; do
+                  scp ~/hadoop/etc/hadoop/* $node:/home/hadoop/hadoop/etc/hadoop/;
+              done
+              hdfs namenode -format
+              start-dfs.sh
+            - |+
 Outputs:
   InstanceId:
     Description: InstanceId of the newly created EC2 instance
@@ -102,47 +219,3 @@ Outputs:
     Value: !GetAtt 
       - nodemaster
       - PublicIp
-Metadata:
-  'AWS::CloudFormation::Designer':
-    dd3ae3a6-2caf-4b35-9b96-b77b81e8f16b:
-      size:
-        width: 60
-        height: 60
-      position:
-        x: 60
-        'y': 90
-      z: 1
-      embeds: []
-    0a226bb8-e762-4d35-b7ad-87d08e1b4af9:
-      size:
-        width: 60
-        height: 60
-      position:
-        x: 180
-        'y': 90
-      z: 1
-      embeds: []
-      isassociatedwith:
-        - dd3ae3a6-2caf-4b35-9b96-b77b81e8f16b
-    4a226bb8-e762-4d35-b7ad-87d08e1b4af9:
-      size:
-        width: 60
-        height: 60
-      position:
-        x: 270
-        'y': 30
-      z: 1
-      embeds: []
-      isassociatedwith:
-        - dd3ae3a6-2caf-4b35-9b96-b77b81e8f16b
-    12226bb8-e762-4d35-b7ad-87d08e1b4af9:
-      size:
-        width: 60
-        height: 60
-      position:
-        x: 270
-        'y': 150
-      z: 1
-      embeds: []
-      isassociatedwith:
-        - dd3ae3a6-2caf-4b35-9b96-b77b81e8f16b
