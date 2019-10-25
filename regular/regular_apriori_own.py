@@ -23,14 +23,14 @@ def main(**kwargs):
     """
     Executes Apriori algorithm and print its result.
     """
-    with open('/Users/danielnikulin/Projects/MasterProject/hadoop_spark_perf/dataset/DAT.csv') as f:
+    with open('/Users/danielnikulin/Projects/MasterProject/hadoop_spark_perf/dataset/LARGE_DAT.csv') as f:
         count = sum(1 for _ in f)
 
     support = 0.0002118997384
 
-    lines_count = print(count)
+    print(count)
     transaction_generator = data_from_csv(
-        '/Users/danielnikulin/Projects/MasterProject/hadoop_spark_perf/dataset/DAT.csv')
+        '/Users/danielnikulin/Projects/MasterProject/hadoop_spark_perf/dataset/LARGE_DAT.csv')
     frequent_items_n1 = defaultdict(int)
 
     for transaction in transaction_generator:
@@ -39,7 +39,7 @@ def main(**kwargs):
     frequent_items_n1 = {k for k, v in frequent_items_n1.items() if v / count > support}
     print(frequent_items_n1)
     transaction_generator = data_from_csv(
-        '/Users/danielnikulin/Projects/MasterProject/hadoop_spark_perf/dataset/DAT.csv')
+         '/Users/danielnikulin/Projects/MasterProject/hadoop_spark_perf/dataset/LARGE_DAT.csv')
 
     frequent_items_n2 = defaultdict(int)
     for transaction in transaction_generator:

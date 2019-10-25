@@ -14,13 +14,31 @@ def suppress_py4j_logging():
 from pyspark import SparkConf, SparkContext
 import datetime
 
-conf = SparkConf().setMaster("local").setAppName("Му Арр")
+file = "/Users/danielnikulin/Projects/MasterProject/hadoop_spark_perf/dataset/LARGE_DAT.csv"
+conf = SparkConf().set('spark.master', 'local[*]') \
+    .setAppName("Му Арр") \
+    .set("spark.executor.memory", "2g") \
+    .set("spark.driver.memory", "2g") \
+    .set('spark.executor.pyspark.memory', '2g')\
+    .set('spark.executor.extraJavaOptions', '-XX:+UseCompressedOops')\
+    .set('spark.rdd.compress', True)\
+    .set('spark.serializer', 'org.apache.spark.serializer.KryoSerializer')\
+    .set('spark.driver.maxResultSize', '24m')\
+    .set('spark.memory.fraction', 0.9)\
+    .set('spark.driver.maxResultSize', '100m')
+
+
 sc = SparkContext(conf=conf)
-transactions = sc.textFile("/Users/danielnikulin/Projects/MasterProject/hadoop_spark_perf/dataset/DAT.csv")
+transactions = sc.textFile(file)
 
 now = datetime.datetime.now()
 print(now)
-minSupport = 0.0002118997384 * transactions.count()
+trx_count = transactions.count()
+print(trx_count)
+#0.0002118997384
+print()
+minSupport = 0.000211899738 * trx_count
+print(minSupport)
 transaction_items = transactions.map(lambda line: line.split(","))
 transaction_items.cache()
 
@@ -33,12 +51,8 @@ def n1(items):
 
 
 l1 = transaction_items.flatMap(n1).reduceByKey(add)
-print(l1.collect())
-
-print(transaction_items.take(5))
 l1 = l1.filter(lambda i: int(i[1]) > minSupport)
-print(l1.collect())
-print(l1.count())
+print(l1.take(10))
 
 # cart = l1.cartesian(l1).cache()
 # # sc.broadcast(cart)
@@ -59,10 +73,11 @@ def n2(items):
     return array
 
 
-l2 = transaction_items.flatMap(n2).reduceByKey(add)
-print(l2.take(20))
+l2 = transaction_items.flatMap(n2)
+print(l2.take(50))
+l2 = l2.reduceByKey(add)
+
 l2 = l2.filter(lambda i: int(i[1]) > minSupport)
 print(l2.collect())
-print(l2.count())
 now = datetime.datetime.now()
 print(now)
