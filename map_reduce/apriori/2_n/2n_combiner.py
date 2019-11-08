@@ -8,8 +8,6 @@ __status__ = "Development"
 
 import sys
 
-CONSTRAINT = 1000
-
 
 def do_reduce(word, _values):
     return word, sum(_values)
@@ -22,13 +20,11 @@ for line in sys.stdin:
     key, value = line.split("\t")
     if key != prev_key and prev_key is not None:
         result_key, result_value = do_reduce(prev_key, values)
-        if result_value > CONSTRAINT:
-            print(result_key + "\t" + str(result_value))
+        print(result_key + "\t" + str(result_value))
         values = []
     prev_key = key
     values.append(int(value))
 
 if prev_key is not None:
     result_key, result_value = do_reduce(prev_key, values)
-    if result_value > CONSTRAINT:
-        print(result_key + "\t" + str(result_value))
+    print(result_key + "\t" + str(result_value))

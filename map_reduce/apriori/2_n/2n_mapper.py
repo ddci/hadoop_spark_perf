@@ -17,6 +17,7 @@ def get_2n_items():
     return items
 
 
+# MEMORY ERROR
 # def count_usage_of_2n_items():
 #     all_items_set = get_2n_items()
 #     all_items = list(itertools.combinations(all_items_set, N_DIM))
@@ -30,12 +31,13 @@ def get_2n_items():
 def count_usage_of_2n_items():
     all_items_set = get_2n_items()
     for line in sys.stdin:
-        items = line.rstrip("\n").rsplit(",")
-        exist_in_items = []
-        for item in all_items_set:
-            if item in items:
-                exist_in_items.append(item)
+        items = line.rstrip("\n").rsplit(",")  # 74743 43355 53554
+        exist_in_items = set()
+        for item in items:
+            if item in all_items_set:
+                exist_in_items.add(item)
         for combination in itertools.combinations(exist_in_items, N_DIM):
+            combination = sorted(combination)
             print("{el1},{el2}\t{count}".format(el1=combination[0], el2=combination[1], count=1))
 
 
