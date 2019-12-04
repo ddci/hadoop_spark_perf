@@ -12,8 +12,8 @@ import sys
 def count_usage():
     for line in sys.stdin:
         elements = line.rstrip("\n").rsplit(",")
-        for word in elements:
-            print("{word}\t{count}".format(word=word, count=1))
+        for item in elements:
+            print("{item}\t{count}".format(item=item, count=1))
 
 
 if __name__ == "__main__":

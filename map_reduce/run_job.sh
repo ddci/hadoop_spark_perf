@@ -2,16 +2,23 @@
 
 stop-yarn.sh && stop-dfs.sh
 mkdir /home/hadoop/algorithms
-scp -rp /Users/danielnikulin/Projects/MasterProject/hadoop_spark_perf/map_reduce/ hadoop@ec2-52-57-251-35.eu-central-1.compute.amazonaws.com:/home/hadoop/algorithms/
-scp -rp /Users/danielnikulin/Projects/MasterProject/hadoop_spark_perf/regular/ hadoop@ec2-52-57-251-35.eu-central-1.compute.amazonaws.com:/home/hadoop/algorithms/regular/
-scp -rp /Users/danielnikulin/Projects/MasterProject/hadoop_spark_perf/dataset/perf_test/ hadoop@ec2-52-57-251-35.eu-central-1.compute.amazonaws.com:/home/hadoop/perf_test/
+scp -rp /Users/danielnikulin/Projects/MasterProject/hadoop_spark_perf/map_reduce/ hadoop@ec2-3-120-190-179.eu-central-1.compute.amazonaws.com:/home/hadoop/algorithms/
+scp -rp /Users/danielnikulin/Projects/MasterProject/hadoop_spark_perf/regular/ hadoop@ec2-3-120-190-179.eu-central-1.compute.amazonaws.com:/home/hadoop/algorithms/regular/
+scp -rp /Users/danielnikulin/Projects/MasterProject/hadoop_spark_perf/dataset/perf_test/ hadoop@ec2-3-120-190-179.eu-central-1.compute.amazonaws.com:/home/hadoop/perf_test/
 
+#Spark
+scp -rp /Users/danielnikulin/Projects/MasterProject/hadoop_spark_perf/spark/ hadoop@ec2-3-120-190-179.eu-central-1.compute.amazonaws.com:/home/hadoop/spark_jobs/
 #######
 hdfs namenode -format
 start-dfs.sh && start-yarn.sh
 hdfs dfs -mkdir -p /user/hadoop
+
 hdfs dfs -mkdir apriori_input
 hdfs dfs -put /home/hadoop/perf_test/csv/ apriori_input/
+
+
+hdfs dfs -mkdir /spark-logs
+$SPARK_HOME/sbin/start-history-server.sh
 
 
 hdfs namenode -format &&
@@ -51,9 +58,9 @@ yarn jar ~/hadoop/share/hadoop/tools/lib/hadoop-streaming-3.1.2.jar\
 wc -l <filename>
 head -n 100000 DAT.csv > DAT100K.csv
 
-for i in {1..4}
+for i in {1..200}
 do
-   cat DAT1M.csv >> DAT4M.csv
+   cat DAT1M.csv >> DAT200M.csv
    echo "Welcome $i times"
 done
 
@@ -61,10 +68,10 @@ done
 
 
 yarn logs -applicationId<applicationID>
-yarn logs -applicationId application_1570478973576_0002
+yarn logs -applicationId application_1573381386337_0003
 
-yarn application -kill application_1572208120423_0003
+yarn application -kill application_1573407117540_0002
 
 
 /Users/danielnikulin/Projects/MasterProject/hadoop_spark_perf/dataset/DAT.tsv -s 0.0002118997384 -c 0 -l 3
-python3 /home/hadoop/algorithms/regular_apriori_3_habr.py /home/hadoop/test_data/DAT.tsv -s 0.0002118997384 -c 0 -l 3
+python3 regular_apriori_own.py ~/perf_test/csv/DAT400M.csv -s 0.00025
